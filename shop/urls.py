@@ -24,7 +24,8 @@ urlpatterns = [
     path('categories/<int:pk>/', views.category_detail, name='category-detail'),
     path('products/', views.product_list, name='product-list'),
     path('products/<int:pk>/', views.product_detail, name='product-detail'),
-    path('users/', views.users, name='create-user'),
+    path('users/', views.user_list, name='create-user'),
+    path('users/<int:pk>/', views.user_detail, name='create-detail'),
 
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='redoc-ui'),

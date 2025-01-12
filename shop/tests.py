@@ -28,11 +28,19 @@ class CategoryTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_get_category(self):
+    def test_get_categories(self):
         url = reverse('category-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+
+    def test_get_category(self):
+        category = Category.objects.create(name='Electronics', description='Electronic products')
+
+        url = reverse('category-detail', args=[category.id])
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 class ProductTests(APITestCase):
     

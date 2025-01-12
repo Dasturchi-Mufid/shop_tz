@@ -24,8 +24,6 @@ from django.contrib.auth import get_user_model
 @api_view(['GET', 'POST'])
 def category_list(request):
 
-    permission_classes = [IsAuthenticated]
-
     if request.method == 'GET':
         categories = Category.objects.all()
         serializer = serializers.CategorySerializer(categories, many=True)
@@ -145,7 +143,7 @@ def product_detail(request, pk):
 
 @swagger_auto_schema(
     method='get',
-    operation_description="Get details of a user",
+    operation_description="Get all users",
     responses={200: serializers.UserSerializer()}
 )
 @swagger_auto_schema(
@@ -154,7 +152,7 @@ def product_detail(request, pk):
     request_body=serializers.UserSerializer
 )
 @api_view(['POST', 'GET'])
-def users(request):
+def user_list(request):
     if request.method == 'GET':
         users = CustomUser.objects.all()
         serializer = serializers.UserSerializer(users, many=True)
@@ -172,3 +170,18 @@ def users(request):
         except CustomUser.DoesNotExist:
             user = CustomUser.objects.create_user(**data)
         return Response({"email": user.email}, status=status.HTTP_201_CREATED)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get a user's details",
+    responses={200:serializers.UserSerializer()}
+)
+@api_view(['GET'])
+def user_detail(request, pk):
+    try:
+        user = CustomUser.objects.get(pk=pk)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = serializers.UserSerializer(user)
+    return Response(serializer.data)
