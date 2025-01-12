@@ -1,4 +1,3 @@
-# shop/views.py
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -6,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
 from .models import Category, Product, CustomUser
-from .serializers import CategorySerializer, ProductSerializer, UserSerializer
+from . import serializers
 from django.contrib.auth import get_user_model
 
 
@@ -15,12 +14,12 @@ from django.contrib.auth import get_user_model
 @swagger_auto_schema(
     method='get',
     operation_description="Get a list of categories",
-    responses={200: CategorySerializer(many=True)}
+    responses={200: serializers.CategorySerializer(many=True)}
 )
 @swagger_auto_schema(
     method='post',
     operation_description="Create a new category",
-    request_body=CategorySerializer
+    request_body=serializers.CategorySerializer
 )
 @api_view(['GET', 'POST'])
 def category_list(request):
@@ -29,11 +28,11 @@ def category_list(request):
 
     if request.method == 'GET':
         categories = Category.objects.all()
-        serializer = CategorySerializer(categories, many=True)
+        serializer = serializers.CategorySerializer(categories, many=True)
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = CategorySerializer(data=request.data)
+        serializer = serializers.CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -43,12 +42,12 @@ def category_list(request):
 @swagger_auto_schema(
     method='get',
     operation_description="Get details of a category",
-    responses={200: CategorySerializer()}
+    responses={200: serializers.CategorySerializer()}
 )
 @swagger_auto_schema(
     method='put',
     operation_description="Update a category",
-    request_body=CategorySerializer
+    request_body=serializers.CategorySerializer
 )
 @swagger_auto_schema(
     method='delete',
@@ -62,11 +61,11 @@ def category_detail(request, pk):
         return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = CategorySerializer(category)
+        serializer = serializers.CategorySerializer(category)
         return Response(serializer.data)
 
     elif request.method == 'PUT':
-        serializer = CategorySerializer(category, data=request.data)
+        serializer = serializers.CategorySerializer(category, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -82,22 +81,23 @@ def category_detail(request, pk):
 @swagger_auto_schema(
     method='get',
     operation_description="Get a list of products",
-    responses={200: ProductSerializer(many=True)}
+    responses={200: serializers.ProductSerializerResponse(many=True)}
 )
 @swagger_auto_schema(
     method='post',
     operation_description="Create a new product",
-    request_body=ProductSerializer
+    request_body=serializers.ProductSerializer,
+    responses={201: serializers.ProductSerializerResponse()}
 )
 @api_view(['GET', 'POST'])
 def product_list(request):
     if request.method == 'GET':
         products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True)
+        serializer = serializers.ProductSerializerResponse(products, many=True)
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = ProductSerializer(data=request.data)
+        serializer = serializers.ProductSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -107,12 +107,12 @@ def product_list(request):
 @swagger_auto_schema(
     method='get',
     operation_description="Get details of a product",
-    responses={200: ProductSerializer()}
+    responses={200: serializers.ProductSerializerResponse()}
 )
 @swagger_auto_schema(
     method='put',
     operation_description="Update a product",
-    request_body=ProductSerializer
+    request_body=serializers.ProductSerializer
 )
 @swagger_auto_schema(
     method='delete',
@@ -126,11 +126,11 @@ def product_detail(request, pk):
         return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = ProductSerializer(product)
+        serializer = serializers.ProductSerializerResponse(product)
         return Response(serializer.data)
 
     elif request.method == 'PUT':
-        serializer = ProductSerializer(product, data=request.data)
+        serializer = serializers.ProductSerializer(product, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -138,24 +138,37 @@ def product_detail(request, pk):
 
     elif request.method == 'DELETE':
         product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"message":f"{pk} succesfully deleted"},status=status.HTTP_204_NO_CONTENT)
 
 
 # User Views
 
 @swagger_auto_schema(
+    method='get',
+    operation_description="Get details of a user",
+    responses={200: serializers.UserSerializer()}
+)
+@swagger_auto_schema(
     method='post',
     operation_description="Create a new user",
-    request_body=UserSerializer
+    request_body=serializers.UserSerializer
 )
-@api_view(['POST'])
-def create_user(request):
-    data = request.data
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not email or not password:
-        return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    user = CustomUser.objects.create_user(email=email, password=password, **data)
-    return Response({"email": user.email}, status=status.HTTP_201_CREATED)
+@api_view(['POST', 'GET'])
+def users(request):
+    if request.method == 'GET':
+        users = CustomUser.objects.all()
+        serializer = serializers.UserSerializer(users, many=True)
+        return Response(serializer.data)
+    if request.method == 'POST':
+        data = request.data
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not email or not password:
+            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            CustomUser.objects.get(email=email)
+            return Response({"error": "User with this email already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        except CustomUser.DoesNotExist:
+            user = CustomUser.objects.create_user(**data)
+        return Response({"email": user.email}, status=status.HTTP_201_CREATED)
